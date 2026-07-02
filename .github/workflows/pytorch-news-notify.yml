@@ -7,7 +7,7 @@ name: PyTorchKR news notify
 
 on:
   schedule:
-    - cron: "40 10 * * *" # TEMP: 오늘 19:40 KST 테스트용 (UTC 10:40). 확인 후 "0 23 * * *"(KST 08:00)로 되돌리세요.
+    - cron: "46 14 * * *" # TEMP: 오늘 23:46 KST 테스트용 (UTC 14:46). 확인 후 "0 23 * * *"(KST 08:00)로 되돌리세요.
   workflow_dispatch: {} # Actions 탭에서 수동 실행(테스트)도 가능
 
 permissions:
@@ -41,4 +41,10 @@ jobs:
             exit 0
           fi
           git commit -m "chore: update pytorch news seen state"
-          git push
+          for i in 1 2 3 4 5; do
+            git pull --rebase origin main && git push && exit 0
+            echo "Push rejected, retrying ($i)..."
+            sleep $((RANDOM % 5 + 2))
+          done
+          echo "Failed to push after retries."
+          exit 1

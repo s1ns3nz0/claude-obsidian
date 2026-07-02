@@ -40,13 +40,25 @@ def save_state(state: dict) -> None:
 
 
 def send_telegram(text: str) -> None:
-    token = os.environ["TELEGRAM_BOT_TOKEN"]
-    chat_id = os.environ["TELEGRAM_CHAT_ID"]
+    token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
+    chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
+    if not token or not chat_id:
+        print(
+            f"Missing secret(s): TELEGRAM_BOT_TOKEN set={bool(token)}, "
+            f"TELEGRAM_CHAT_ID set={bool(chat_id)}",
+            file=sys.stderr,
+        )
+        raise SystemExit(1)
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     data = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode("utf-8")
     req = urllib.request.Request(url, data=data)
-    with urllib.request.urlopen(req, timeout=20) as resp:
-        resp.read()
+    try:
+        with urllib.request.urlopen(req, timeout=20) as resp:
+            resp.read()
+    except urllib.error.HTTPError as e:
+        body = e.read().decode("utf-8", errors="replace")
+        print(f"Telegram API error {e.code}: {body}", file=sys.stderr)
+        raise
 
 
 def main() -> int:
