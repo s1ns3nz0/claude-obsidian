@@ -7,7 +7,7 @@ name: PyTorchKR news notify
 
 on:
   schedule:
-    - cron: "46 14 * * *" # TEMP: 오늘 23:46 KST 테스트용 (UTC 14:46). 확인 후 "0 23 * * *"(KST 08:00)로 되돌리세요.
+    - cron: "49 14 * * *" # TEMP: 오늘 23:49 KST 테스트용 (UTC 14:49). 확인 후 "0 23 * * *"(KST 08:00)로 되돌리세요.
   workflow_dispatch: {} # Actions 탭에서 수동 실행(테스트)도 가능
 
 permissions:
