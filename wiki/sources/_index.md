@@ -29,6 +29,7 @@ All source pages — summaries of ingested documents, transcripts, articles, and
 
 ## Articles
 
+- [[DevSpace-ChatGPT-Local-MCP|DevSpace: ChatGPT를 로컬 코드에 연결하는 자체 호스팅 MCP 서버]] — PyTorchKR, 2026-07-01
 <!-- Add article source pages here -->
 
 ---

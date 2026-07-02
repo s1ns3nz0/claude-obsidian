@@ -25,6 +25,130 @@ Parse recent entries: `grep "^## \[" wiki/log.md | head -10`
 
 ---
 
+## [2026-07-02] ingest | PyTorchKR news pipeline test — DevSpace MCP article
+- Source: https://discuss.pytorch.kr/t/devspace-chatgpt-mcp/10994 (선택 기사 #1, PyTorchKR 텔레그램 알림 파이프라인의 첫 end-to-end 테스트)
+- Raw copy: `.raw/pytorch-devspace-mcp.md`
+- Source page: `wiki/sources/DevSpace-ChatGPT-Local-MCP.md`
+- Concept created: `wiki/concepts/DevSpace.md` (self-hosted MCP server, tunnel + owner-password gating pattern)
+- Indexes updated: `wiki/sources/_index.md` (Articles), `wiki/concepts/_index.md` (new "AI Tooling / MCP" section)
+- Purpose: validate the "텔레그램 알림 → 사용자가 기사 선택 → Claude 요약·인제스트 → wiki 반영 → Quartz 동기화" 수동 파이프라인 end-to-end
+
+## [2026-07-02] backfill | UAV-AI-SOC 시스템디자인 wave-1 manifest+log reconciliation
+- Wave-1 (docs 00, 01, 05) ingest agents finished the content writes but lost their manifest/log updates to a parallel-write race — `flock` unavailable on macOS, so `wiki-lock.sh` fell through to unsynchronized reads. Later waves clobbered wave-1 bookkeeping.
+- Reconciled: added missing `.raw/.manifest.json` entries for docs 00/01/05 with `backfilled: 2026-07-02` marker; added this single consolidated log entry rather than three fictitious ingest entries.
+- Content verified in-place:
+  - Doc 00 → `wiki/sources/UAV-AI-SOC-시스템디자인-00.md` (series overview anchor)
+  - Doc 01 → `wiki/sources/UAV-AI-SOC-시스템디자인-01.md`, concepts: `UAV-AI-SOC Core Layer`, `SOCState`, `SOCPlatformError Exception Hierarchy`, `Settings SecretStr`, `Alert Model`
+  - Doc 05 → `wiki/sources/UAV-AI-SOC-시스템디자인-05.md`, concepts: `Experience Memory`, `Memory Poisoning`, `Self-Improvement Loop`, `ExperienceRecord`, `Asymmetric Trust`, `Provenance Trust`
+- Series index: 00 added to `ingested_docs` frontmatter; table already showed all 17 rows complete.
+- Followup: patch `scripts/wiki-lock.sh` to use Python-based cross-process lock on macOS (see prior log note in doc 04 entry), or install `brew install util-linux`. Track separately.
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 12 — 다중 Judge 앙상블 (판정 강화)
+- Source: `.raw/UAV-AI-SOC/시스템디자인/12 - 다중 Judge 앙상블 (판정 강화).md`
+- Domain: UAV-AI-SOC | Series doc 12 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-12.md`, `wiki/concepts/Multi-Judge Ensemble.md`, `wiki/concepts/Signal Veto.md`, `wiki/concepts/Verdict Aggregation.md`
+- Updated: `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 12 marked 완료; 3 new concept links; 12 added to ingested_docs), `.raw/.manifest.json` (doc 12 entry)
+- Key: ValidationAgent의 단일 judge 한계(결정론 단독=애매한 케이스 침묵, LLM 단독=인젝션 취약, 이진 출력=KPI 불가)를 세 직교 판정자(SignalJudge·LlmJudge·ExperienceJudge)로 해결; SignalJudge만 거부권 보유 — LLM이 점수 1.0을 줘도 물리 신호 없으면 강제 FP 확정; composite_score(0~1 연속값)는 RAGAS/Prometheus 연결 가능
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 16 — 도메인 컨텍스트 · 인과 · 재현성 · 품질 [SERIES COMPLETE]
+- Source: `.raw/UAV-AI-SOC/시스템디자인/16 - 도메인 컨텍스트 · 인과 · 재현성 · 품질.md`
+- Domain: UAV-AI-SOC | Series terminal doc (16 of 16) | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-16.md`, `wiki/concepts/RAGAS 품질 측정.md`, `wiki/concepts/Causal Reasoning Chain.md`, `wiki/concepts/Data Lineage Snapshot.md`, `wiki/concepts/GNSS Domain Context.md`
+- Updated: `wiki/references/UAV-AI-SOC-시스템디자인.md` (series_complete=true; Doc 16 row; 4 new concept links; Series complete callout), `wiki/concepts/_index.md` (4 Doc 16 concepts), `.raw/.manifest.json` (Doc 16 entry with series_terminal=true)
+- Key: Four orthogonal trust pillars — GNSS/Airspace context for S1-scenario confidence boosting (community sources do confidence only, never severity), deterministic causal chain YAML with LLM for explanation only, `LineageSnapshot` capturing git-SHA+model+policy-hashes for audit reproducibility (opt-in `LINEAGE_ENABLED`), RAGAS fire-and-forget async KPI (faithfulness/answer_relevancy/context_relevancy) with graceful degrade
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 15 — 위협 인텔 자동화 (Threat Landscape · Auto KQL)
+- Source: `.raw/UAV-AI-SOC/시스템디자인/15 - 위협 인텔 자동화 (Threat Landscape · Auto KQL).md`
+- Domain: UAV-AI-SOC | Series doc 15 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-15.md`, `wiki/concepts/Threat Landscape Agent.md`, `wiki/concepts/Auto KQL Rule Agent.md`
+- Updated: `wiki/concepts/Detection-as-Code.md` (Doc 15 cross-ref + two new related links), `wiki/concepts/Threat Intel Feed.md` (Doc 15 CISA KEV extension cross-ref), `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 15 complete; 2 new concept links), `.raw/.manifest.json` (doc 15 entry)
+- Key: Doc 07 made KQL immutable to AI; Doc 15 extends that by making the ATT&CK coverage list self-updating (ThreatLandscapeAgent) and letting LLM draft initial KQL stubs for new T-ids (AutoKqlRuleAgent) — all still gated behind PR + human review; KqlValidator blacklists external_table/http_get to block LLM data-exfil prompt injection
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 14 — 자가발전 실연동
+- Source: `.raw/UAV-AI-SOC/시스템디자인/14 - 자가발전 실연동.md`
+- Domain: UAV-AI-SOC | Series doc 14 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-14.md`, `wiki/concepts/OutcomeProbeAgent Pipeline.md`
+- Updated: `wiki/concepts/Self-Improvement Loop.md` (plumbing cross-ref + zero-user-code section), `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 14 complete; 1 new concept link), `.raw/.manifest.json` (doc 14 entry)
+- Key: Doc 05/06 designed the self-improvement loop conceptually; doc 14 is the plumbing that makes it run with zero user code — SimBridge auto-hook accumulates telemetry windows in-stream, OutcomeProbeAgent applies a deterministic decision matrix (not LLM interpretation) and fans out to three write gates, learning worker scheduler activates workers from settings alone; the full SITL→label→memory→recall cycle now requires no human intervention
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 13 — IoA 공격자 중심 방어
+- Source: `.raw/UAV-AI-SOC/시스템디자인/13 - IoA 공격자 중심 방어.md`
+- Domain: UAV-AI-SOC | Series doc 13 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-13.md`, `wiki/concepts/IoA (Indicator of Attack).md`, `wiki/concepts/Attacker-Centric Defense.md`
+- Updated: `wiki/entities/MITRE ATT&CK.md` (IoA role section: ATT&CK T-IDs as IoA vocabulary), `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 13 complete; 2 new concept links), `.raw/.manifest.json` (doc 13 entry)
+- Key: IoC(사후 증거물)는 도구만 바꿔도 우회되지만 IoA(사전 행위 지표)는 TTP 시퀀스를 추적해 동일 공격자를 재인식한다. n=2 마르코프로 다음 MITRE 기법을 결정론적으로 예측(LLM 미사용); 예측이 자동 대응을 트리거할 수 있으므로 통계 기반 재현 가능성이 필수. priority 강등은 explicit + CONFIRMED_TP 조건만 허용해 FP 폭탄 조작을 차단.
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 07 — 탐지·룰 자동개선 (Detection-as-Code)
+- Source: `.raw/UAV-AI-SOC/시스템디자인/07 - 탐지·룰 자동개선 (Detection-as-Code).md`
+- Domain: UAV-AI-SOC | Series doc 07 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-07.md`, `wiki/concepts/Detection-as-Code.md`, `wiki/concepts/Watchlist-as-Detection-Data.md`
+- Updated: `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 07 complete; 2 new concept links), `.raw/.manifest.json`
+- Key: KQL query logic is permanently immutable to AI; only watchlist data (the tables KQL reads) is AI-editable via auto-generated GitHub PRs — no-auto-merge invariant closes the adversarial false-positive-induction attack vector
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 10 — 보안 위협모델 + 방어
+- Source: `.raw/UAV-AI-SOC/시스템디자인/10 - 보안 위협모델 + 방어.md`
+- Domain: UAV-AI-SOC | Series doc 10 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-10.md`, `wiki/concepts/Defense-in-Depth.md`, `wiki/concepts/Attack Surface.md`
+- Updated: `wiki/concepts/Memory Poisoning.md` (doc 10 cross-ref + Multi-Judge ensemble note), `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 10 complete; 2 new concept links), `.raw/.manifest.json`
+- Key: AI SOC becomes its own attack target; automation/self-improvement expand the attack surface; 5-layer GPS spoofing concealment scenario illustrates defense-in-depth — all five must be bypassed simultaneously; ATT&CK coverage gaps classified into 5 archetypes (A–E), split into addressable vs. inherent gaps for prioritization
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 08 — 외부 연동 (TI·샌드박스·취약점)
+- Source: `.raw/UAV-AI-SOC/시스템디자인/08 - 외부 연동 (TI·샌드박스·취약점).md`
+- Domain: UAV-AI-SOC | Series doc 08 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-08.md`, `wiki/concepts/Threat Intel Feed.md`, `wiki/concepts/Sandbox Detonation.md`, `wiki/concepts/Vulnerability Enrichment.md`
+- Updated: `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 08 complete; 3 new concept links), `.raw/.manifest.json` (doc 08 entry)
+- Key: Three external enrichment tools (TI/Sandbox/Vuln) share a 4-layer pattern (Protocol → Stub → real adapter with client_factory injection → Composite worst-case merge); each confirmed malicious signal adds confidence +0.2; asyncio.gather parallelizes all three; UAV-specific additions GnssJamTool and AirspaceTool add domain-aware context; community sources may boost confidence but are barred from touching severity engine
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 09 — 배포·운영 (토폴로지·스케일·관측)
+- Source: `.raw/UAV-AI-SOC/시스템디자인/09 - 배포·운영 (토폴로지·스케일·관측).md`
+- Domain: UAV-AI-SOC | Series doc 09 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-09.md`, `wiki/concepts/2-Deployment 하이브리드 토폴로지.md`, `wiki/concepts/GitOps ArgoCD.md`, `wiki/concepts/Prometheus Observability.md`
+- Updated: `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 09 complete; 3 new concept links), `.raw/.manifest.json` (doc 09 entry)
+- Key: ADR D6 separates hot-path (single replica, stateful) from learning (HPA, stateless) — state consistency vs. throughput elasticity; Prometheus rendered with stdlib only (zero external deps); "ghost metric" test cross-validates dashboard panel references against live /metrics output
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 11 — 검증 (테스트·벤치마크)
+- Source: `.raw/UAV-AI-SOC/시스템디자인/11 - 검증 (테스트·벤치마크).md`
+- Domain: UAV-AI-SOC | Series doc 11 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-11.md`, `wiki/concepts/벤치마크 하네스.md`, `wiki/concepts/ATLAS 레드팀 벤치마크.md`, `wiki/concepts/회귀 게이트.md`
+- Updated: `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 11 complete; 3 new concept links), `.raw/.manifest.json` (doc 11 entry)
+- Key: 400+ tests all run without network (Protocol injection + determinism principle); ATLAS T0020 red-team target robust success rate 0.0 (falsifiable defense proof); 5-stage CI pipeline (ruff → mypy → pytest 400+ → benchmarks G2 → RAGAS sim)
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 06 — 환경검증 오라클
+- Source: `.raw/UAV-AI-SOC/시스템디자인/06 - 환경검증 오라클.md`
+- Domain: UAV-AI-SOC | Series doc 06 of 16 | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-06.md`, `wiki/concepts/환경검증 오라클.md`
+- Updated: `wiki/concepts/Asymmetric Trust.md` (oracle cross-ref), `wiki/references/UAV-AI-SOC-시스템디자인.md` (doc 06 complete)
+- Key: "텍스트는 거짓말해도 물리는 못 한다" — physical telemetry from sim engine is tamper-proof; INCONCLUSIVE verdicts are never written to memory (grey-zone blockade)
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 04 — GraphRAG (관계를 검색하기)
+- Source: `.raw/UAV-AI-SOC/시스템디자인/04 - GraphRAG.md`
+- Domain: UAV-AI-SOC | Series doc 04 of N | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-GraphRAG-04.md`, `wiki/concepts/GraphRAG.md`, `wiki/concepts/Knowledge Graph.md`, `wiki/concepts/CompositeRetriever.md`, `wiki/entities/MITRE ATT&CK.md`
+- Updated: `wiki/references/UAV-AI-SOC-시스템디자인.md` (Doc 04 row marked complete; 5 new concept links), `wiki/concepts/_index.md` (3 new UAV-AI-SOC entries), `wiki/entities/_index.md` (Frameworks section + MITRE ATT&CK), `wiki/concepts/RAG.md` (Extension: GraphRAG section + Doc 04 cross-reference)
+- Key concepts: UAV-AI-SOC skips standard GraphRAG steps 1-3 and 5 (LLM entity extraction, entity resolution, community detection/summarization) in favor of human-curated YAML graph (`data/mitre_attack_graph.yaml`); deterministic lexical token-match scoring (`score()`, `_scenario_terms()`); neighborhood expansion (`neighborhood()`) as local-search equivalent; kill-chain adjacency inference as global-search replacement; `CompositeRetriever` (asyncio.gather, source-keyed dedup, mutual fault isolation via `_safe()`); two-graph architecture (static knowledge graph vs. dynamic IoA visualization graph)
+- Cross-references: [[RAG]] (doc #03, flat RAG prerequisite; source guardrail splits `kb/` from `graph/`), [[Query-Time Retrieval]], [[DragonScale Memory]] (this vault's analogous BM25+rerank retrieval)
+- Note: wiki-lock.sh `acquire` failed on macOS (flock not available); single-writer session, no parallel agents, no corruption risk. Sequential writes applied.
+- No contradictions detected with existing pages.
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 02 — 에이전트 오케스트레이션 (파이프라인)
+- Source: `.raw/UAV-AI-SOC/시스템디자인/02 - 에이전트 오케스트레이션 (파이프라인).md`
+- Domain: UAV-AI-SOC | Series doc 02 of N | Language: Korean
+- Created: `wiki/sources/UAV-AI-SOC-시스템디자인-02-에이전트-오케스트레이션.md`, `wiki/concepts/에이전트 오케스트레이션 파이프라인.md`, `wiki/concepts/LangGraph.md`, `wiki/concepts/BaseSOCAgent.md`, `wiki/concepts/고정 파이프라인 토폴로지.md`, `wiki/entities/UAV-AI-SOC.md`
+- Updated: `wiki/references/UAV-AI-SOC-시스템디자인.md` (Doc 02 row complete), `wiki/concepts/SOCState.md` (GNSS walkthrough + Doc 02 source link added), `wiki/concepts/_index.md` (5 new UAV-AI-SOC Doc 02 concept entries), `wiki/entities/_index.md` (Projects section + UAV-AI-SOC entry)
+- Key concepts: 6-agent fixed pipeline (Triage→Investigation→Validation→Response/RuleUpdate→Report), LangGraph `add_conditional_edges` (single branch point), `_timed` decorator for per-node latency KPI (MTTT/MTTC), dependency injection via `None` defaults, `signal_judge` 3-way verdict (has_signal AND has_rule AND corroborated), S5 guardrail (policy-engine severity floor overrides LLM suggestion), `BaseWorkerAgent` for periodic workers, Validation ensemble (3 judges, asyncio.gather), Report 4-embed extensions
+- Cross-references: [[SOCState]] (extended from Doc 01 with Doc 02 walkthrough), [[RAG]] (Investigation sources), [[wiki/references/UAV-AI-SOC-시스템디자인]] (series index updated)
+- Note: wiki-lock.sh acquire failed on macOS (flock not available); single-writer session, no corruption risk.
+- No contradictions detected with existing pages.
+
+## [2026-07-02] ingest | UAV-AI-SOC 시스템디자인 03 — RAG (검색 증강)
+- Source: `.raw/UAV-AI-SOC/시스템디자인/03 - RAG (검색 증강).md`
+- Domain: UAV-AI-SOC | Series doc 03 of N
+- Created: `wiki/sources/UAV-AI-SOC-03-RAG.md`, `wiki/concepts/RAG.md`, `wiki/references/UAV-AI-SOC-시스템디자인.md` (new series index)
+- Updated: `wiki/references/UAV-AI-SOC-시스템디자인.md` (Doc 03 row), `wiki/concepts/_index.md` (UAV-AI-SOC section), `wiki/concepts/Query-Time Retrieval.md` (cross-reference to [[RAG]])
+- Key concepts: RAGFlow on-premises hybrid search (vector+BM25), deterministic confidence formula from retrieval scores (no LLM self-assessment), source-origin guardrail (`kb/` prefix whitelist defends against prompt injection at score 0.99), graceful degradation to confidence 0.2, RAGAS async evaluation layer
+- Cross-reference: [[Query-Time Retrieval]] (academic RAG lineage), [[DragonScale Memory]] (this vault's analogous BM25+cosine retrieval)
+- No contradictions detected with existing pages.
+
 ## [2026-04-24] save | v1.6.0 public release notes (Teams, Karpathy-style)
 - Type: release doc + visual assets
 - Locations (new): `docs/releases/v1.6.0.md` (346 lines, 6 sections, Karpathy-style prose), `wiki/meta/dragonscale-mechanism-overview.svg` (4-mechanism diagram with shared .vault-meta/ gate), `wiki/meta/dragonscale-6-test-flow.svg` (validation timeline), `wiki/meta/dragonscale-frontier-graph.svg` (M4 candidate + 3 filed pages)
