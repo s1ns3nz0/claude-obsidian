@@ -1,0 +1,56 @@
+name: Sync wiki to Quartz site
+
+# wiki/ 폴더가 바뀌어 main에 push 될 때마다, 별도의 Quartz 사이트 리포로
+# 내용을 복사해서 push한다. Quartz 리포에는 자체 GitHub Pages 배포
+# 워크플로(deploy.yml)가 이미 있으므로, 이 push가 그 배포를 자동 트리거한다.
+#
+# 필요한 사전 설정 (Settings > Secrets and variables > Actions):
+#   - Variable  QUARTZ_SITE_REPO : 예) your-username/llm-wiki-site
+#   - Secret    QUARTZ_SITE_PAT  : QUARTZ_SITE_REPO에 대한 Contents:write
+#                                   권한을 가진 fine-grained PAT
+#
+# 두 값이 설정되기 전까지는 아래 job이 조용히 스킵된다.
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "wiki/**"
+
+jobs:
+  sync:
+    if: vars.QUARTZ_SITE_REPO != ''
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Checkout vault (source of truth)
+        uses: actions/checkout@v4
+        with:
+          path: vault
+
+      - name: Checkout quartz site
+        uses: actions/checkout@v4
+        with:
+          repository: ${{ vars.QUARTZ_SITE_REPO }}
+          token: ${{ secrets.QUARTZ_SITE_PAT }}
+          path: site
+
+      - name: Mirror wiki/ into site content/
+        run: |
+          rsync -av --delete \
+            --exclude ".obsidian" \
+            --exclude ".vault-meta" \
+            vault/wiki/ site/content/
+
+      - name: Commit and push if changed
+        working-directory: site
+        run: |
+          git config user.name "wiki-sync-bot"
+          git config user.email "wiki-sync-bot@users.noreply.github.com"
+          git add content
+          if git diff --cached --quiet; then
+            echo "No content changes, skipping push."
+            exit 0
+          fi
+          git commit -m "sync: wiki content from claude-obsidian ($(date -u +%Y-%m-%dT%H:%M:%SZ))"
+          git push
