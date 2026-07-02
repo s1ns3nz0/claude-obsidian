@@ -7,7 +7,7 @@ name: PyTorchKR news notify
 
 on:
   schedule:
-    - cron: "54 14 * * *" # TEMP: 오늘 23:54 KST 테스트용 (UTC 14:54). 확인 후 "0 23 * * *"(KST 08:00)로 되돌리세요.
+    - cron: "0 23 * * *" # 매일 KST 08:00 (UTC 23:00). GitHub 스케줄 지연으로 실제 도착은 몇 분~1시간 정도 늦을 수 있음.
   workflow_dispatch: {} # Actions 탭에서 수동 실행(테스트)도 가능
 
 permissions:
