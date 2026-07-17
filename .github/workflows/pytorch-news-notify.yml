@@ -1,6 +1,7 @@
 name: PyTorchKR news notify
 
-# 매일 discuss.pytorch.kr/c/news/14 를 확인해서 새 글이 있으면 Telegram으로 알림.
+# 매일 discuss.pytorch.kr/c/news/14 와 news.hada.io(GeekNews)를 확인해서
+# 새 글이 있으면 Telegram으로 알림.
 # 필요한 시크릿 (Settings > Secrets and variables > Actions > Secrets):
 #   TELEGRAM_BOT_TOKEN
 #   TELEGRAM_CHAT_ID
