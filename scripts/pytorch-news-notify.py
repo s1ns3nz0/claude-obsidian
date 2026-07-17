@@ -11,6 +11,7 @@ import datetime
 import json
 import os
 import sys
+import time
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -19,7 +20,7 @@ import xml.etree.ElementTree as ET
 STATE_PATH = ".vault-meta/pytorch-news-seen.json"
 PYTORCH_CATEGORY_JSON_URL = "https://discuss.pytorch.kr/c/news/14.json"
 GEEKNEWS_RSS_URL = "https://news.hada.io/rss/news"
-MAX_ITEMS_IN_MESSAGE = 15
+TELEGRAM_MESSAGE_LIMIT = 4096
 ATOM_NS = {"atom": "http://www.w3.org/2005/Atom"}
 
 
@@ -49,6 +50,27 @@ def save_state(state: dict) -> None:
         f.write("\n")
 
 
+def chunk_message(lines: list, limit: int = TELEGRAM_MESSAGE_LIMIT) -> list:
+    """Pack lines into chunks that stay under Telegram's per-message limit,
+    so long new-post lists are split across messages instead of truncated."""
+    chunks = []
+    current = []
+    current_len = 0
+    for line in lines:
+        if len(line) > limit:
+            line = line[: limit - 1] + "…"
+        line_len = len(line) + 1  # +1 for the joining newline
+        if current and current_len + line_len > limit:
+            chunks.append("\n".join(current))
+            current = []
+            current_len = 0
+        current.append(line)
+        current_len += line_len
+    if current:
+        chunks.append("\n".join(current))
+    return chunks
+
+
 def send_telegram(text: str) -> None:
     token = os.environ.get("TELEGRAM_BOT_TOKEN", "").strip()
     chat_id = os.environ.get("TELEGRAM_CHAT_ID", "").strip()
@@ -61,14 +83,26 @@ def send_telegram(text: str) -> None:
         raise SystemExit(1)
     url = f"https://api.telegram.org/bot{token}/sendMessage"
     data = urllib.parse.urlencode({"chat_id": chat_id, "text": text}).encode("utf-8")
-    req = urllib.request.Request(url, data=data)
-    try:
-        with urllib.request.urlopen(req, timeout=20) as resp:
-            resp.read()
-    except urllib.error.HTTPError as e:
-        body = e.read().decode("utf-8", errors="replace")
-        print(f"Telegram API error {e.code}: {body}", file=sys.stderr)
-        raise
+    for attempt in range(3):
+        req = urllib.request.Request(url, data=data)
+        try:
+            with urllib.request.urlopen(req, timeout=20) as resp:
+                resp.read()
+            return
+        except urllib.error.HTTPError as e:
+            body = e.read().decode("utf-8", errors="replace")
+            if e.code == 429 and attempt < 2:
+                retry_after = 5
+                try:
+                    parsed = json.loads(body).get("parameters", {}).get("retry_after", 5)
+                    retry_after = min(int(parsed), 15)  # stay well inside the 5-minute CI job budget
+                except (json.JSONDecodeError, AttributeError, TypeError, ValueError):
+                    pass
+                print(f"Telegram rate-limited, retrying in {retry_after}s...", file=sys.stderr)
+                time.sleep(retry_after)
+                continue
+            print(f"Telegram API error {e.code}: {body}", file=sys.stderr)
+            raise
 
 
 def fetch_pytorch_topics() -> list:
@@ -126,10 +160,8 @@ def try_fetch(label: str, fetch_fn) -> list | None:
 
 def format_section(label: str, new_items: list) -> list:
     lines = [f"\U0001F4F0 {label} 새 글 {len(new_items)}건"]
-    for item in new_items[:MAX_ITEMS_IN_MESSAGE]:
+    for item in new_items:
         lines.append(f"- {item['title']}\n  {item['url']}")
-    if len(new_items) > MAX_ITEMS_IN_MESSAGE:
-        lines.append(f"...외 {len(new_items) - MAX_ITEMS_IN_MESSAGE}건 더")
     return lines
 
 
@@ -161,8 +193,15 @@ def main() -> int:
         geeknews_seen.update(t["id"] for t in geeknews_topics)
 
     if message_sections:
-        send_telegram("\n".join(message_sections))
-        print("Sent notification.")
+        # A failure mid-loop skips save_state() below, so already-sent chunks'
+        # items get resent next run (idempotent Telegram resend, no data loss).
+        # Accepted tradeoff — see the send loop for the mitigations in place.
+        chunks = chunk_message(message_sections)
+        for i, chunk in enumerate(chunks):
+            if i > 0:
+                time.sleep(1.1)  # stay under Telegram's per-chat rate limit
+            send_telegram(chunk)
+        print(f"Sent notification ({len(chunks)} message(s)).")
     else:
         print("No new topics.")
 
