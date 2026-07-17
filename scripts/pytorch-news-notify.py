@@ -135,8 +135,8 @@ def format_section(label: str, new_items: list) -> list:
 
 def main() -> int:
     state = load_state()
-    pytorch_seen = set(state.get("seen_topic_ids", []))
-    geeknews_seen = set(state.get("geeknews_seen_topic_ids", []))
+    pytorch_seen = set(str(x) for x in state.get("seen_topic_ids", []))
+    geeknews_seen = set(str(x) for x in state.get("geeknews_seen_topic_ids", []))
 
     pytorch_topics = try_fetch("PyTorchKR", fetch_pytorch_topics)
     geeknews_topics = try_fetch("GeekNews", fetch_geeknews_topics)
